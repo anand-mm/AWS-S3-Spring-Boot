@@ -1,0 +1,15 @@
+aws:
+  s3:
+    bucket-name: your-bucket-name
+    region: your-region
+  accessKeyId: your-access-key
+  secretAccessKey: your-secret-key
+
+server:
+  port: 9090
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
