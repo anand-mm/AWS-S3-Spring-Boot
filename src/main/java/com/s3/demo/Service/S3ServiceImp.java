@@ -20,6 +20,8 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.Bucket;
+import software.amazon.awssdk.services.s3.model.BucketCannedACL;
+import software.amazon.awssdk.services.s3.model.BucketVersioningStatus;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.CreateBucketResponse;
 import software.amazon.awssdk.services.s3.model.Delete;
@@ -58,16 +60,17 @@ public class S3ServiceImp implements S3Service {
 
     public String createBucket(String bucketName) {
         try {
-            if (!doesBucketExist(bucketName)) {
-                CreateBucketRequest createBucketRequest = CreateBucketRequest.builder()
-                        .bucket(bucketName)
-                        .build();
+            // if (!doesBucketExist(bucketName)) {
+            CreateBucketRequest createBucketRequest = CreateBucketRequest.builder()
+                    .acl(BucketCannedACL.PRIVATE)
+                    .bucket(bucketName)
+                    .build();
 
-                CreateBucketResponse createBucketResponse = s3Client.createBucket(createBucketRequest);
-                return "Bucket created: " + createBucketResponse.location();
-            } else {
-                return "Bucket already exists.";
-            }
+            CreateBucketResponse createBucketResponse = s3Client.createBucket(createBucketRequest);
+            return "Bucket created: " + createBucketResponse.location();
+            // } else {
+            // return "Bucket already exists.";
+            // }
         } catch (S3Exception exception) {
             return "Error creating bucket: " + exception.awsErrorDetails().errorMessage();
         } catch (SdkClientException e) {
@@ -83,24 +86,24 @@ public class S3ServiceImp implements S3Service {
                 .collect(Collectors.toList());
     }
 
-    public boolean doesBucketExist(String bucketName) {
-        HeadBucketRequest headBucketRequest = HeadBucketRequest.builder()
-                .bucket(bucketName)
-                .build();
+    // public boolean doesBucketExist(String bucketName) {
+    // HeadBucketRequest headBucketRequest = HeadBucketRequest.builder()
+    // .bucket(bucketName)
+    // .build();
 
-        try {
-            s3Client.headBucket(headBucketRequest);
-            return true;
-        } catch (NoSuchBucketException e) {
-            return false;
-        }
-    }
+    // try {
+    // s3Client.headBucket(headBucketRequest);
+    // return true;
+    // } catch (NoSuchBucketException e) {
+    // return false;
+    // }
+    // }
 
     // Delete a bucket (must be empty first)
     public String deleteBucket(String bucketName) {
-        if (!doesBucketExist(bucketName)) {
-            return "Bucket does not exist.";
-        }
+        // if (!doesBucketExist(bucketName)) {
+        // return "Bucket does not exist.";
+        // }
 
         try {
             // Attempt to delete the bucket
@@ -117,15 +120,18 @@ public class S3ServiceImp implements S3Service {
         }
     }
 
-    public String uploadFile(String bucketName, String key, MultipartFile file) throws IOException {
-        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                .bucket(bucketName)
-                .key(key)
-                .build();
+    public String uploadFile(String bucketName, String key, MultipartFile file) {
+        try {
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .build();
 
-        // Uploading file content as InputStream directly to S3
-        s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
-
+            // Uploading file content as InputStream directly to S3
+            s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
+        } catch (Exception exp) {
+            exp.printStackTrace();
+        }
         return "File uploaded successfully with key: " + key;
     }
 
@@ -142,21 +148,25 @@ public class S3ServiceImp implements S3Service {
                 .collect(Collectors.toList());
     }
 
-    public void downloadFile(String bucketName, String key, ServletOutputStream outputStream) throws IOException {
-        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                .bucket(bucketName)
-                .key(key)
-                .build();
+    public void downloadFile(String bucketName, String key, ServletOutputStream outputStream) {
+        try {
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .build();
 
-        // Fetch the file from S3
-        try (ResponseInputStream<GetObjectResponse> s3ObjectStream = s3Client.getObject(getObjectRequest)) {
-            // Stream the content to the ServletOutputStream
-            byte[] buffer = new byte[1024];
-            int bytesRead;
-            while ((bytesRead = s3ObjectStream.read(buffer)) != -1) {
-                outputStream.write(buffer, 0, bytesRead);
+            // Fetch the file from S3
+            try (ResponseInputStream<GetObjectResponse> s3ObjectStream = s3Client.getObject(getObjectRequest)) {
+                // Stream the content to the ServletOutputStream
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = s3ObjectStream.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, bytesRead);
+                }
+                outputStream.flush();
             }
-            outputStream.flush();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
